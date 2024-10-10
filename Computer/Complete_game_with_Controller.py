@@ -13,7 +13,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("pong")
 
 clock = pygame.time.Clock()
-FPS = 30
+FPS = 60
 
 ser = serial.Serial('COM12', 115200, timeout=1)
 
@@ -114,6 +114,10 @@ def main():
     while running:
         screen.fill(BLACK)
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        
         if ser.in_waiting > 0:
             # Try to read the serial data
             
@@ -126,8 +130,8 @@ def main():
             value2 = float(value2)
 
         # Scale the values to fit the screen height (assuming 600 as the maximum Y value)
-            value1 = int(value1 * 600)  # Convert to int and scale for player 1
-            value2 = int(value2 * 600)  # Convert to int and scale for player 2
+            value1 = int(value1 * 500)  # Convert to int and scale for player 1
+            value2 = int(value2 * 500)  # Convert to int and scale for player 2
 
         # Store the latest valid values in case of future errors
             last_value1, last_value2 = value1, value2
