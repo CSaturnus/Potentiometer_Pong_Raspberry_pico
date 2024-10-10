@@ -10,12 +10,15 @@ except serial.SerialException as e:
 pygame.init()
 # Font that is used to render the text
 font20 = pygame.font.Font('freesansbold.ttf', 20)
+font50 = pygame.font.Font('freesansbold.ttf', 50)
 font200 = pygame.font.Font('freesansbold.ttf', 200)
 
 # RGB values of standard colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+
+MATCH_POINT = 10
 
 MAX_SPEED = 12
 # Basic parameters of the screen
@@ -47,7 +50,7 @@ class Paddle:
 #        print(self.posy)
     
     def displayScore(self, text, score, x, y, color):
-        text = font20.render(text+str(score), True, color)
+        text = font50.render(text+str(score), True, color)
         textRect = text.get_rect()
         textRect.center = (x, y)
         screen.blit(text, textRect)
@@ -169,8 +172,8 @@ def Gameplay():
         player2.display()
         ball.display()
 
-        player1.displayScore("Player_1 : ", player1score, 100, 20, WHITE)
-        player2.displayScore("Player_2 : ", player2score, WIDTH-100, 20, WHITE)
+        player1.displayScore("Player_1 : ", player1score, 400, 50, WHITE)
+        player2.displayScore("Player_2 : ", player2score, WIDTH-400, 50, WHITE)
 
         pygame.display.update()
 
@@ -205,8 +208,54 @@ def Setting():
                 pygame.quit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_p and player.posy >= 150 and player.posy <=250:
-                    print("work in progress")
+                    Matchpoint()
                 if event.key == pygame.K_p and player.posy >= 410 and player.posy <=550:
+                    running = False
+        player.display()
+        pygame.display.update()
+
+def Matchpoint():
+    running = True
+    Menu_cursor = main_option()
+    player = Paddle(20, 0, 15, 200, WHITE)
+    last_value1 = 0
+    
+    global MATCH_POINT
+
+    while running:
+        clock.tick(FPS)
+        screen.fill(BLACK)
+
+        str_MATCH_POINT = MATCH_POINT
+        Menu_cursor.displaymain(str(str_MATCH_POINT), 200, 400, WHITE)
+        Menu_cursor.displaymain("BACK", 330, 900, WHITE)
+
+        pygame.draw.polygon(screen, WHITE, [(220, 100), (160, 250), (280, 250)])
+        pygame.draw.polygon(screen, WHITE, [(220, 650), (160, 500), (280, 500)])
+
+        if ser.in_waiting > 0:
+            data = ser.readline().decode('utf-8').strip()
+            data = data.strip('()')
+
+            value1, value2 = data.split(',')
+            value1 = float(value1)
+            value2 = float(value2)
+
+            player.update(value1)
+
+            last_value1 = value1
+        else:
+            player.update(last_value1)
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p and player.posy >= 30 and player.posy <=140 and MATCH_POINT < 100:
+                    MATCH_POINT += 1
+                if event.key == pygame.K_p and player.posy >= 430 and player.posy <=540 and MATCH_POINT > 1:
+                    MATCH_POINT -= 1
+                if event.key == pygame.K_p and player.posy >= 750 and player.posy <=850:
                     running = False
         player.display()
         pygame.display.update()
