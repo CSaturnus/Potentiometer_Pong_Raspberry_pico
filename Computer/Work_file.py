@@ -14,12 +14,14 @@ font20 = pygame.font.Font('freesansbold.ttf', 20)
 font50 = pygame.font.Font('freesansbold.ttf', 50)
 font200 = pygame.font.Font('freesansbold.ttf', 200)
 
+Full_Skull = pygame.image.load('Computer/Picture/Skull_Black.png')
+
 # RGB values of standard colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
-MATCH_POINT = 10
+MATCH_POINT = 2
 
 MAX_SPEED = 12
 # Basic parameters of the screen
@@ -72,11 +74,21 @@ class Ball:
         self.yFac = -1
         self.ball = pygame.draw.circle(
             screen, self.color, (self.posx, self.posy), self.radius)
+        
+        self.ballRect = pygame.Rect(posx, posy, 30, 39)
         self.firstTime = 1
+        self.Matchpoint = 0
 
     def display(self):
-         self.ball = pygame.draw.circle(
-            screen, self.color, (self.posx, self.posy), self.radius)
+
+        if self.Matchpoint == 0:
+            self.ball = pygame.draw.circle(
+                screen, self.color, (self.posx, self.posy), self.radius)
+        elif self.Matchpoint == 1:
+            self.ballRect = pygame.Rect(self.posx-15/2, self.posy-39/2, 30, 39)
+            self.ball = pygame.draw.rect(screen, BLACK, self.ballRect)
+            screen.blit(Full_Skull, self.ballRect)
+
     
     def update(self):
         self.posx += self.speedx*self.xFac
@@ -129,6 +141,9 @@ class Ball:
     def getRect(self):
         return self.ball
     
+    def SetMatchpoint(self, Matchpoint):
+        self.Matchpoint = Matchpoint
+
 class main_option:
     def __init__(self):
         self.yes = 1
@@ -175,7 +190,6 @@ def WINNER(Player):
 
         pygame.display.update()
 
-
 def Gameplay():
     running = True
 
@@ -188,6 +202,11 @@ def Gameplay():
     last_value1, last_value2 = 0, 0
     
     player1score, player2score = 0, 0
+
+    Matchpoint = 0
+
+    ball.SetMatchpoint(0)
+
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
@@ -231,6 +250,9 @@ def Gameplay():
 
         player1.displayScore("Player_1 : ", player1score, 400, 50, WHITE)
         player2.displayScore("Player_2 : ", player2score, WIDTH-400, 50, WHITE)
+
+        if player1score == MATCH_POINT-1 or player2score == MATCH_POINT-1:
+            ball.SetMatchpoint(1)
 
         if player1score == MATCH_POINT:
             WINNER("player_1")
