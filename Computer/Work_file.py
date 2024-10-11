@@ -1,5 +1,6 @@
 import pygame
 import serial
+import random
 
 try:
     ser = serial.Serial('COM12', 115200, timeout=1)
@@ -59,11 +60,13 @@ class Paddle:
         return self.playerRect
 
 class Ball:
-    def __init__(self, posx, posy, radius, speed, color):
+    def __init__(self, posx, posy, radius, speed, color, height):
+        self.height = height
         self.posx = posx
         self.posy = posy
         self.radius = radius
-        self.speed = speed
+        self.speedx = speed
+        self.speedy = speed
         self.color = color
         self.xFac = 1
         self.yFac = -1
@@ -76,8 +79,8 @@ class Ball:
             screen, self.color, (self.posx, self.posy), self.radius)
     
     def update(self):
-        self.posx += self.speed*self.xFac
-        self.posy += self.speed*self.yFac
+        self.posx += self.speedx*self.xFac
+        self.posy += self.speedy*self.yFac
 
 		# If the ball hits the top or bottom surfaces, 
 		# then the sign of yFac is changed and 
@@ -99,11 +102,28 @@ class Ball:
         self.posy = HEIGHT//2
         self.xFac *= -1
         self.firstTime = 1
-        self.speed = 7
+        self.speedx = 7
+        self.speedy = 7
 
-    def hit(self):
-        if self.speed < MAX_SPEED:  # Define MAX_SPEED, e.g., MAX_SPEED = 15
-            self.speed += 0.3
+    def hit(self, posy_paddle):
+        
+        if self.posy + self.radius <= posy_paddle + self.height / 2:
+            self.hitonpaddle = (self.posy - posy_paddle)/self.height
+            print(self.hitonpaddle)
+
+        if self.posy + self.radius >= posy_paddle + self.height / 2:
+            self.hitonpaddle = (posy_paddle + self.height - self.posy)/self.height
+            print(self.hitonpaddle)
+            
+        if self.speedx < MAX_SPEED:  # Define MAX_SPEED, e.g., MAX_SPEED = 15
+            self.speedx += random.random() * 0.5
+        else:
+            self.speedx -= random.random() * 0.5
+        
+        if self.speedy < MAX_SPEED:  # Define MAX_SPEED, e.g., MAX_SPEED = 15
+            self.speedy += random.random() * 0.5
+        else:
+            self.speedy -= random.random() * 0.5
         self.xFac *= -1
 
     def getRect(self):
@@ -119,12 +139,49 @@ class main_option:
         textRect.center = (x, y)
         screen.blit(text, textRect)
 
+class Bar():
+    def __init__(self, posx, posy, width, height, max):
+        self.posx = posx
+        self.posy = posy
+        self.width = width
+        self.height = height
+        self.max = max
+
+    def extend_the_bar(self):
+        if self.width <= self.max:
+            self.width += 3
+        Bar = pygame.Rect(self.posx, self.posy, self.width, self.height)
+        pygame.draw.rect(screen, WHITE, Bar)
+    def reset_bar(self):
+        self.width = 0
+
+def WINNER(Player):
+    running = True
+
+    while running:
+        clock.tick(FPS)
+        screen.fill(BLACK)
+        text = font50.render("The Winner is "+Player, True, WHITE)
+        textRect = text.get_rect()
+        textRect.center = (WIDTH//2, HEIGHT//2)
+        screen.blit(text, textRect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    running = False
+
+        pygame.display.update()
+
+
 def Gameplay():
     running = True
 
     player1 = Paddle(20, 0, 15, 200, WHITE)
     player2 = Paddle(WIDTH-30, 0, 15, 1080, WHITE)
-    ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE)
+    ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE, 200)
 
     listOfPlayer = [player1, player2]
 
@@ -156,7 +213,7 @@ def Gameplay():
         
         for player in listOfPlayer:
             if pygame.Rect.colliderect(ball.getRect(), player.getRect()):
-                ball.hit()
+                ball.hit(player.posy)
 
         point = ball.update()
 
@@ -175,6 +232,13 @@ def Gameplay():
         player1.displayScore("Player_1 : ", player1score, 400, 50, WHITE)
         player2.displayScore("Player_2 : ", player2score, WIDTH-400, 50, WHITE)
 
+        if player1score == MATCH_POINT:
+            WINNER("player_1")
+            running = False
+        elif player2score == MATCH_POINT:
+            WINNER("player_2")
+            running = False
+        
         pygame.display.update()
 
 def Setting():
@@ -183,11 +247,24 @@ def Setting():
     player = Paddle(20, 0, 15, 200, WHITE)
     last_value1 = 0
 
+    Bar1 = Bar(55, 370, 0, 30, 1400)
+    Bar2 = Bar(55, 675, 0, 30, 565)
+
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
         Menu_cursor.displaymain("MATCH POINT", 750, 300, WHITE)
         Menu_cursor.displaymain("BACK", 330, 600, WHITE)
+
+        if player.posy >= 150 and player.posy <= 250:
+            Bar1.extend_the_bar()
+        else:
+            Bar1.reset_bar()
+
+        if player.posy >= 410 and player.posy <= 550:
+            Bar2.extend_the_bar()
+        else:
+            Bar2.reset_bar()
 
         if ser.in_waiting > 0:
             data = ser.readline().decode('utf-8').strip()
@@ -222,13 +299,28 @@ def Matchpoint():
     
     global MATCH_POINT
 
+    Bar1 = Bar(55, 970, 0, 30, 565)
+
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
 
         str_MATCH_POINT = MATCH_POINT
-        Menu_cursor.displaymain(str(str_MATCH_POINT), 200, 400, WHITE)
+        Menu_cursor.displaymain(str(str_MATCH_POINT), 220, 395, WHITE)
         Menu_cursor.displaymain("BACK", 330, 900, WHITE)
+
+        if player.posy >= 750 and player.posy <=850:
+            Bar1.extend_the_bar()
+        else:
+            Bar1.reset_bar()
+
+        if player.posy >= 30 and player.posy <=140:
+            pygame.draw.polygon(screen, WHITE, [(220, 80), (140, 270), (300, 270)])
+            pygame.draw.polygon(screen, BLACK, [(220, 90), (150, 260), (290, 260)])
+        
+        if player.posy >= 430 and player.posy <=540:
+            pygame.draw.polygon(screen, WHITE, [(220, 670), (140, 480), (300, 480)])
+            pygame.draw.polygon(screen, BLACK, [(220, 660), (150, 490), (290, 490)])
 
         pygame.draw.polygon(screen, WHITE, [(220, 100), (160, 250), (280, 250)])
         pygame.draw.polygon(screen, WHITE, [(220, 650), (160, 500), (280, 500)])
@@ -264,14 +356,34 @@ def main():
     running = True
     Menu_cursor = main_option()
     player = Paddle(20, 0, 15, 200, WHITE)
+    last_value1 = 0
+
+    Bar1 = Bar(55, 370, 0, 30, 570)
+    Bar2 = Bar(55, 675, 0, 30, 1010)
+    Bar3 = Bar(55, 975, 0, 30, 487)
 
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
-        Menu_cursor.displaymain("PLAY", 300, 300, WHITE)
+        Menu_cursor.displaymain("PONG", 340, 300, WHITE)
         Menu_cursor.displaymain("SETTINGS", 560, 600, WHITE)
-        Menu_cursor.displaymain("QUIT", 300, 900, WHITE)
+        Menu_cursor.displaymain("QUIT", 290, 900, WHITE)
 
+        if player.posy >= 150 and player.posy <= 250:
+            Bar1.extend_the_bar()
+        else:
+            Bar1.reset_bar()
+
+        if player.posy >= 410 and player.posy <= 550:
+            Bar2.extend_the_bar()
+        else:
+            Bar2.reset_bar()
+
+        if player.posy >= 750 and player.posy <= 850:
+            Bar3.extend_the_bar()
+        else:
+            Bar3.reset_bar()
+        
         if ser.in_waiting > 0:
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
