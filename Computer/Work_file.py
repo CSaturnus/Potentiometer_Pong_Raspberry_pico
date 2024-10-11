@@ -9,21 +9,35 @@ except serial.SerialException as e:
     exit()
 
 pygame.init()
+pygame.mixer.init()
+
 # Font that is used to render the text
 font20 = pygame.font.Font('freesansbold.ttf', 20)
 font50 = pygame.font.Font('freesansbold.ttf', 50)
 font200 = pygame.font.Font('freesansbold.ttf', 200)
 
+# PICTURES
 Full_Skull = pygame.image.load('Computer/Picture/Skull_Black.png')
+
+Skull_Black_Lower_1 = pygame.image.load('Computer/Picture/Skull_Black_Lower_1.png')
+Skull_Black_Lower_2 = pygame.image.load('Computer/Picture/Skull_Black_Lower_2.png')
+Skull_Black_Lower = pygame.image.load('Computer/Picture/Skull_Black_Lower.png')
+
+Skull_Black_Upper_1 = pygame.image.load('Computer/Picture/Skull_Black_Upper_1.png')
+Skull_Black_Upper_2 = pygame.image.load('Computer/Picture/Skull_Black_Upper_2.png')
+Skull_Black_Upper = pygame.image.load('Computer/Picture/Skull_Black_Upper.png')
 
 # RGB values of standard colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
-MATCH_POINT = 2
+MATCH_POINT = 3
 
-MAX_SPEED = 12
+MAX_SPEED = 15
+
+PADDLE_HEIGHT = 150
+PADDLE_WIDTH = 20
 # Basic parameters of the screen
 WIDTH, HEIGHT = 1920, 1080
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -172,6 +186,9 @@ class Bar():
 
 def WINNER(Player):
     running = True
+    pygame.mixer.music.stop()
+    pygame.mixer.music.load('Computer/Music/Victory.mp3')
+    pygame.mixer.music.play(-1)
 
     while running:
         clock.tick(FPS)
@@ -180,6 +197,9 @@ def WINNER(Player):
         textRect = text.get_rect()
         textRect.center = (WIDTH//2, HEIGHT//2)
         screen.blit(text, textRect)
+
+        if ser.in_waiting > 0:
+            data = ser.readline().decode('utf-8').strip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -190,12 +210,93 @@ def WINNER(Player):
 
         pygame.display.update()
 
+def animation(player1score,player2score):
+    running = True
+
+    player1 = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
+    player2 = Paddle(WIDTH-30, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
+    ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE, 200)
+
+    listOfPlayer = [player1, player2]
+
+    last_value1, last_value2 = 0, 0
+    
+    player1score, player2score = player1score,player2score
+
+    Time = 0
+    shut_mouth = 0
+
+    pygame.mixer.music.load('Computer/Music/DOOM_RIP_TEAR.mp3')
+    pygame.mixer.music.play(-1)
+
+    while running:
+        clock.tick(FPS)
+        screen.fill(BLACK)
+		
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+        if ser.in_waiting > 0:
+            data = ser.readline().decode('utf-8').strip()
+            data = data.strip('()')
+
+            value1, value2 = data.split(',')
+            value1 = float(value1)
+            value2 = float(value2)
+
+            player1.update(value1)
+            player2.update(value2)
+
+            last_value1, last_value2 = value1, value2
+        else:
+            player1.update(last_value1)
+            player2.update(last_value2)
+        
+        ball.display()
+
+        if Time <= FPS*1:
+            Skull_up = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 - 30 , 30, 39)
+            screen.blit(Skull_Black_Upper_1, Skull_up)
+            Skull_low = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 + 33 + 15, 30, 39)
+            screen.blit(Skull_Black_Lower_1, Skull_low)
+        elif Time >= FPS*1 and Time <= FPS*2:
+            Skull_up = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 - 30 , 30, 39)
+            screen.blit(Skull_Black_Upper_2, Skull_up)
+            Skull_low = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 + 33 + 15, 30, 39)
+            screen.blit(Skull_Black_Lower_2, Skull_low)
+        elif Time >= FPS*2 and Time <= FPS*3:
+            Skull_up = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 - 30 , 30, 39)
+            screen.blit(Skull_Black_Upper, Skull_up)
+            Skull_low = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 + 33 + 15, 30, 39)
+            screen.blit(Skull_Black_Lower, Skull_low)
+        elif Time >= FPS*3:
+            Skull_up = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 - 30 + shut_mouth , 30, 39)
+            screen.blit(Skull_Black_Upper, Skull_up)
+            Skull_low = pygame.Rect(WIDTH//2-30//2, HEIGHT//2-39/2 + 33 + 15 - shut_mouth*2, 30, 39)
+            screen.blit(Skull_Black_Lower, Skull_low)
+            if shut_mouth <=15:
+                shut_mouth += 1
+        if shut_mouth == 15:
+            running = 0
+
+
+        print(Time)
+        Time +=1
+        
+        player1.display()
+        player2.display()
+
+        player1.displayScore("Player_1 : ", player1score, 400, 50, WHITE)
+        player2.displayScore("Player_2 : ", player2score, WIDTH-400, 50, WHITE)
+        
+        pygame.display.update()
+
 def Gameplay():
     running = True
 
-    player1 = Paddle(20, 0, 15, 200, WHITE)
-    player2 = Paddle(WIDTH-30, 0, 15, 1080, WHITE)
-    ball = Ball(WIDTH//2, HEIGHT//2, 7, 7, WHITE, 200)
+    player1 = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
+    player2 = Paddle(WIDTH-25, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE) #1080 paddle when debugging, 200 while playing
+    ball = Ball(WIDTH//2, HEIGHT//2, 7, 10, WHITE, 200)
 
     listOfPlayer = [player1, player2]
 
@@ -206,6 +307,8 @@ def Gameplay():
     Matchpoint = 0
 
     ball.SetMatchpoint(0)
+
+    Animation = 1
 
     while running:
         clock.tick(FPS)
@@ -252,6 +355,9 @@ def Gameplay():
         player2.displayScore("Player_2 : ", player2score, WIDTH-400, 50, WHITE)
 
         if player1score == MATCH_POINT-1 or player2score == MATCH_POINT-1:
+            if Animation == 1:
+                animation(player1score,player2score)
+            Animation = 0
             ball.SetMatchpoint(1)
 
         if player1score == MATCH_POINT:
@@ -266,7 +372,7 @@ def Gameplay():
 def Setting():
     running = True
     Menu_cursor = main_option()
-    player = Paddle(20, 0, 15, 200, WHITE)
+    player = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
     last_value1 = 0
 
     Bar1 = Bar(55, 370, 0, 30, 1400)
@@ -377,7 +483,7 @@ def Matchpoint():
 def main():
     running = True
     Menu_cursor = main_option()
-    player = Paddle(20, 0, 15, 200, WHITE)
+    player = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
     last_value1 = 0
 
     Bar1 = Bar(55, 370, 0, 30, 570)
@@ -390,6 +496,8 @@ def main():
         Menu_cursor.displaymain("PONG", 340, 300, WHITE)
         Menu_cursor.displaymain("SETTINGS", 560, 600, WHITE)
         Menu_cursor.displaymain("QUIT", 290, 900, WHITE)
+
+        pygame.mixer.music.stop()
 
         if player.posy >= 150 and player.posy <= 250:
             Bar1.extend_the_bar()
