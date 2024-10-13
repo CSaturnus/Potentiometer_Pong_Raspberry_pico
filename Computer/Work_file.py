@@ -34,7 +34,7 @@ GREEN = (0, 255, 0)
 
 MATCH_POINT = 3
 
-MAX_SPEED = 15
+MAX_SPEED = 10
 
 PADDLE_HEIGHT = 150
 PADDLE_WIDTH = 20
@@ -44,7 +44,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pong")
 
 clock = pygame.time.Clock() 
-FPS = 60
+FPS = 120
 
 class Paddle:
     def __init__(self, posx, posy, width, height, color):
@@ -60,11 +60,19 @@ class Paddle:
 	
     def display(self):
         self.player = pygame.draw.rect(screen, self.color, self.playerRect)
+
+    def Shrink(self):
+        if self.height > 100:
+            self.height -= 5
+            self.playerRect.height = self.height
     
+    def restore(self):
+        self.height = PADDLE_HEIGHT
+        self.playerRect.height = PADDLE_HEIGHT
+
     def update(self, posy):
         self.posy = posy*(HEIGHT-self.height)
         self.playerRect.y = self.posy
-#        print(self.posy)
     
     def displayScore(self, text, score, x, y, color):
         text = font50.render(text+str(score), True, color)
@@ -128,18 +136,17 @@ class Ball:
         self.posy = HEIGHT//2
         self.xFac *= -1
         self.firstTime = 1
-        self.speedx = 7
-        self.speedy = 7
+        self.speedx = 5
+        self.speedy = 5
 
     def hit(self, posy_paddle):
         
         if self.posy + self.radius <= posy_paddle + self.height / 2:
             self.hitonpaddle = (self.posy - posy_paddle)/self.height
-            print(self.hitonpaddle)
+
 
         if self.posy + self.radius >= posy_paddle + self.height / 2:
             self.hitonpaddle = (posy_paddle + self.height - self.posy)/self.height
-            print(self.hitonpaddle)
             
         if self.speedx < MAX_SPEED:  # Define MAX_SPEED, e.g., MAX_SPEED = 15
             self.speedx += random.random() * 0.5
@@ -225,10 +232,10 @@ def animation(player1score,player2score):
 
     Time = 0
     shut_mouth = 0
-
+    pygame.mixer.music.stop()
     pygame.mixer.music.load('Computer/Music/DOOM_RIP_TEAR.mp3')
     pygame.mixer.music.play(-1)
-
+    pygame.mixer.music.set_volume(1)
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
@@ -295,8 +302,8 @@ def Gameplay():
     running = True
 
     player1 = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
-    player2 = Paddle(WIDTH-25, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE) #1080 paddle when debugging, 200 while playing
-    ball = Ball(WIDTH//2, HEIGHT//2, 7, 10, WHITE, 200)
+    player2 = Paddle(WIDTH-25, 0, PADDLE_WIDTH, PADDLE_HEIGHT+930, WHITE) #1080 paddle when debugging, 200 while playing
+    ball = Ball(WIDTH//2, HEIGHT//2, 7, 5, WHITE, 200)
 
     listOfPlayer = [player1, player2]
 
@@ -310,10 +317,15 @@ def Gameplay():
 
     Animation = 1
 
+    pygame.mixer.music.stop()
+    pygame.mixer.music.load('Computer/Music/Tetris.mp3')
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.3)
+
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
-		
+	
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -336,13 +348,19 @@ def Gameplay():
         for player in listOfPlayer:
             if pygame.Rect.colliderect(ball.getRect(), player.getRect()):
                 ball.hit(player.posy)
-
+                player1.Shrink()
+                player2.Shrink()	
+                
         point = ball.update()
 
         if point == -1:
             player1score += 1
+            player1.restore()
+            player2.restore()
         elif point == 1:
             player2score += 1
+            player1.restore()
+            player2.restore()
 
         if point:
             ball.reset()
