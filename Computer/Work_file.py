@@ -286,8 +286,6 @@ def animation(player1score,player2score):
         if shut_mouth == 15:
             running = 0
 
-
-        print(Time)
         Time +=1
         
         player1.display()
