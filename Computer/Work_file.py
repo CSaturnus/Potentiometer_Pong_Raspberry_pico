@@ -247,7 +247,7 @@ def animation(player1score,player2score):
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
 
-            value1, value2 = data.split(',')
+            value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
 
@@ -331,7 +331,7 @@ def Gameplay():
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
 
-            value1, value2 = data.split(',')
+            value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
 
@@ -414,7 +414,7 @@ def Setting():
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
 
-            value1, value2 = data.split(',')
+            value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
 
@@ -473,7 +473,7 @@ def Matchpoint():
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
 
-            value1, value2 = data.split(',')
+            value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
 
@@ -534,7 +534,7 @@ def main():
             data = ser.readline().decode('utf-8').strip()
             data = data.strip('()')
 
-            value1, value2 = data.split(',')
+            value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
 
