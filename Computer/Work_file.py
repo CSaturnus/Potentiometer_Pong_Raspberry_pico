@@ -1,15 +1,36 @@
 import pygame
 import serial
 import random
+import serial.tools.list_ports
+import time 
+
+def find_pico_port():
+    # Define the Vendor ID and Product ID for the Raspberry Pi Pico
+    pico_vid = "2E8A"
+    pico_pid = "0005"
+    
+    # List all available ports
+    ports = list(serial.tools.list_ports.comports())
+    for port in ports:
+        # Check each port's hardware ID for the Pico's VID and PID
+        if pico_vid in port.hwid and pico_pid in port.hwid:
+            print(f"Found Raspberry Pi Pico on port: {port.device}")
+            return port.device  # Returns the COM port as a string (e.g., "COM3" on Windows)
+    
+    print("Raspberry Pi Pico not found.")
+    return None
 
 try:
-    ser = serial.Serial('COM12', 115200, timeout=1)
+    pico_port = find_pico_port()
+    ser = serial.Serial(pico_port, 115200, timeout=1)
 except serial.SerialException as e:
     print(f"Serial port error: {e}")
     exit()
 
 pygame.init()
 pygame.mixer.init()
+
+Hit_sound =  pygame.mixer.Sound('Computer/Sound_effect/Ball_hit.mp3')
 
 # Font that is used to render the text
 font20 = pygame.font.Font('freesansbold.ttf', 20)
@@ -32,7 +53,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 
-MATCH_POINT = 3
+MATCH_POINT = 5
 
 MAX_SPEED = 10
 
@@ -45,6 +66,9 @@ pygame.display.set_caption("Pong")
 
 clock = pygame.time.Clock() 
 FPS = 120
+
+debounce_interval = 0.2
+current_time = 0
 
 class Paddle:
     def __init__(self, posx, posy, width, height, color):
@@ -71,7 +95,7 @@ class Paddle:
         self.playerRect.height = PADDLE_HEIGHT
 
     def update(self, posy):
-        self.posy = posy*(HEIGHT-self.height)
+        self.posy = (1 - posy)*(HEIGHT-self.height)
         self.playerRect.y = self.posy
     
     def displayScore(self, text, score, x, y, color):
@@ -197,6 +221,10 @@ def WINNER(Player):
     pygame.mixer.music.load('Computer/Music/Victory.mp3')
     pygame.mixer.music.play(-1)
 
+    last_button_press_time = time.time()
+
+    Button = 0
+
     while running:
         clock.tick(FPS)
         screen.fill(BLACK)
@@ -207,13 +235,22 @@ def WINNER(Player):
 
         if ser.in_waiting > 0:
             data = ser.readline().decode('utf-8').strip()
+            data = data.strip('()')
+
+            value1, value2, Button = data.split(',')
+            value1 = float(value1)
+            value2 = float(value2)
+            Button = int(Button)
+
+        current_time = time.time()
+
+        if Button == 1 and (current_time - last_button_press_time) > debounce_interval:
+            last_button_press_time = current_time
+            running = False
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p:
-                    running = False
 
         pygame.display.update()
 
@@ -300,7 +337,7 @@ def Gameplay():
     running = True
 
     player1 = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
-    player2 = Paddle(WIDTH-25, 0, PADDLE_WIDTH, PADDLE_HEIGHT+930, WHITE) #1080 paddle when debugging, 200 while playing
+    player2 = Paddle(WIDTH-25, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE) #1080 paddle when debugging, 200 while playing
     ball = Ball(WIDTH//2, HEIGHT//2, 7, 5, WHITE, 200)
 
     listOfPlayer = [player1, player2]
@@ -345,6 +382,7 @@ def Gameplay():
         
         for player in listOfPlayer:
             if pygame.Rect.colliderect(ball.getRect(), player.getRect()):
+                pygame.mixer.Sound.play(Hit_sound)
                 ball.hit(player.posy)
                 player1.Shrink()
                 player2.Shrink()	
@@ -391,8 +429,12 @@ def Setting():
     player = Paddle(20, 0, PADDLE_WIDTH, PADDLE_HEIGHT, WHITE)
     last_value1 = 0
 
+    Button = 0
+    
     Bar1 = Bar(55, 370, 0, 30, 1400)
     Bar2 = Bar(55, 675, 0, 30, 565)
+
+    last_button_press_time = time.time()
 
     while running:
         clock.tick(FPS)
@@ -415,6 +457,7 @@ def Setting():
             data = data.strip('()')
 
             value1, value2, Button = data.split(',')
+            Button = int(Button)
             value1 = float(value1)
             value2 = float(value2)
 
@@ -423,15 +466,25 @@ def Setting():
             last_value1 = value1
         else:
             player.update(last_value1)
-        
+
+
+
+        current_time = time.time()
+
+        if Button == 1 and (current_time - last_button_press_time) > debounce_interval:
+            
+            last_button_press_time = current_time
+
+            if player.posy >= 150 and player.posy <=250:
+                Matchpoint()
+                last_button_press_time = time.time()
+            if player.posy >= 410 and player.posy <=550:
+                running = False
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p and player.posy >= 150 and player.posy <=250:
-                    Matchpoint()
-                if event.key == pygame.K_p and player.posy >= 410 and player.posy <=550:
-                    running = False
+
         player.display()
         pygame.display.update()
 
@@ -444,6 +497,10 @@ def Matchpoint():
     global MATCH_POINT
 
     Bar1 = Bar(55, 970, 0, 30, 565)
+
+    Button = 0
+
+    last_button_press_time = time.time()
 
     while running:
         clock.tick(FPS)
@@ -476,23 +533,30 @@ def Matchpoint():
             value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
-
+            Button = int(Button)
             player.update(value1)
 
             last_value1 = value1
         else:
             player.update(last_value1)
         
+        current_time = time.time()
+
+        if Button == 1 and (current_time - last_button_press_time) > debounce_interval:
+            
+            last_button_press_time = current_time
+
+            if player.posy >= 30 and player.posy <=140 and MATCH_POINT < 100:
+                MATCH_POINT += 1
+            if player.posy >= 430 and player.posy <=540 and MATCH_POINT > 1:
+                MATCH_POINT -= 1
+            if player.posy >= 750 and player.posy <=850:
+                running = False
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p and player.posy >= 30 and player.posy <=140 and MATCH_POINT < 100:
-                    MATCH_POINT += 1
-                if event.key == pygame.K_p and player.posy >= 430 and player.posy <=540 and MATCH_POINT > 1:
-                    MATCH_POINT -= 1
-                if event.key == pygame.K_p and player.posy >= 750 and player.posy <=850:
-                    running = False
+
         player.display()
         pygame.display.update()
 
@@ -505,6 +569,9 @@ def main():
     Bar1 = Bar(55, 370, 0, 30, 570)
     Bar2 = Bar(55, 675, 0, 30, 1010)
     Bar3 = Bar(55, 975, 0, 30, 487)
+    Button = 0
+
+    last_button_press_time = time.time()
 
     while running:
         clock.tick(FPS)
@@ -537,6 +604,7 @@ def main():
             value1, value2, Button = data.split(',')
             value1 = float(value1)
             value2 = float(value2)
+            Button = int(Button)
 
             player.update(value1)
 
@@ -544,16 +612,24 @@ def main():
         else:
             player.update(last_value1)
 
+        current_time = time.time()
+
+        if Button == 1 and (current_time - last_button_press_time) > debounce_interval:
+            
+            last_button_press_time = current_time
+
+            if player.posy >= 150 and player.posy <= 250:
+                Gameplay()
+                last_button_press_time = time.time()
+            if player.posy >= 410 and player.posy <= 550:
+                Setting()
+                last_button_press_time = time.time()
+            if player.posy >= 750 and player.posy <= 850:
+                running = False
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p and player.posy >= 150 and player.posy <= 250:
-                    Gameplay()
-                if event.key == pygame.K_p and player.posy >= 410 and player.posy <= 550:
-                    Setting()
-                if event.key == pygame.K_p and player.posy >= 750 and player.posy <= 850:
-                    running = False
 
         player.display()
         pygame.display.update()
